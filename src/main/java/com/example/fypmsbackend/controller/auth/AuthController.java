@@ -1,4 +1,4 @@
-package com.example.fypmsbackend.controller;
+package com.example.fypmsbackend.controller.auth;
 
 import com.example.fypmsbackend.dto.LoginRequest;
 import com.example.fypmsbackend.dto.SignupRequest;

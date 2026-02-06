@@ -20,6 +20,10 @@ public class StudentProfile {
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private User user;
 
+    @ManyToOne
+    @JoinColumn(name = "supervisor_id")
+    private User supervisor; //assigned by admin
+
     //getters & setters
 
     public String getRegistrationNumber() {
@@ -45,6 +49,12 @@ public class StudentProfile {
     }
     public void setUser(User user) {
         this.user = user;
+    }
+    public User getSupervisor() {
+        return supervisor;
+    }
+    public void setSupervisor(User supervisor) {
+        this.supervisor = supervisor;
     }
 
 
