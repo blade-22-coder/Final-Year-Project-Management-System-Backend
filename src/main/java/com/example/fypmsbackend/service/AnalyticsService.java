@@ -1,6 +1,6 @@
 package com.example.fypmsbackend.service;
 
-import com.example.fypmsbackend.repository.SubmissionRepository;
+import com.example.fypmsbackend.submission.SubmissionRepository;
 import com.example.fypmsbackend.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

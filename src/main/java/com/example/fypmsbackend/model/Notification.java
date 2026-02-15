@@ -1,5 +1,6 @@
 package com.example.fypmsbackend.model;
 
+import com.example.fypmsbackend.user.User;
 import jakarta.persistence.*;
 
 @Entity

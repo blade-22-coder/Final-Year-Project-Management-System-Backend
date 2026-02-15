@@ -1,8 +1,8 @@
 package com.example.fypmsbackend.config;
 
 import com.example.fypmsbackend.model.Role;
-import com.example.fypmsbackend.model.User;
-import com.example.fypmsbackend.repository.UserRepository;
+import com.example.fypmsbackend.user.User;
+import com.example.fypmsbackend.user.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
