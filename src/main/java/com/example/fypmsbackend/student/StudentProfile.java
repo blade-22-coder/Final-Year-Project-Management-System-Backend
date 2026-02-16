@@ -21,6 +21,7 @@ public class StudentProfile {
     @Column(nullable = false)
     private String course;
     private String projectTitle;
+    private String profileImagePath;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, updatable = false)

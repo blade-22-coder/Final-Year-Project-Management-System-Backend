@@ -20,6 +20,7 @@ public class SupervisorProfile {
     private String staffId;
     private String department;
     private Integer maxStudent;
+    private String profileImagePath;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)

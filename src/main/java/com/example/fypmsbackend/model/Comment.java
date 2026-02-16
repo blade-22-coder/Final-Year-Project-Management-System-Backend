@@ -22,7 +22,7 @@ public class Comment {
     private String message;
 
     private String author;  //student or supervisor
-    private LocalDateTime createdAt;
+    private LocalDateTime CreatedAt;
 
     @ManyToOne
     private User student;
@@ -35,7 +35,7 @@ public class Comment {
     @JoinColumn(name = "supervisor_id")
     private User supervisor;
 
-    public void setcreatedAt(LocalDateTime now) {
+    public void setCreatedAt(LocalDateTime now) {
     }
 
     //getters & setters
