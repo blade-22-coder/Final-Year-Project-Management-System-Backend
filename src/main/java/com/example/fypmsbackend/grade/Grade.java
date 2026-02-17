@@ -2,6 +2,8 @@ package com.example.fypmsbackend.grade;
 
 import com.example.fypmsbackend.model.Status;
 import com.example.fypmsbackend.student.StudentProfile;
+import com.example.fypmsbackend.supervisor.SupervisorProfile;
+import com.example.fypmsbackend.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,6 +21,10 @@ public class Grade {
     @OneToOne
     @JoinColumn(name = "student_profile_id")
     private StudentProfile studentprofile;
+    
+    @OneToOne
+    @JoinColumn(name = "supervisor_profile_id")
+    private SupervisorProfile supervisor;
 
     private int proposal;
     private int progress;
@@ -42,6 +48,10 @@ public class Grade {
     }
 
     public void setStudentProfile(StudentProfile studentProfile) {
+
+    }
+
+    public void setSupervisorProfile(User supervisor) {
 
     }
 

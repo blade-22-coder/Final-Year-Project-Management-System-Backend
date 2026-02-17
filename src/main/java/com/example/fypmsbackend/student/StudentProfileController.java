@@ -86,21 +86,48 @@ public class StudentProfileController {
     }
     @Value("${file.upload-dir")
     private String uploadDir;
-    @PutMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/upload-profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProfileImage(
-            @RequestBody("file") MultipartFile file,
-            @AuthenticationPrincipal User user
+            @RequestParam("file") MultipartFile file,
+            Authentication auth
     ) throws IOException {
 
+        User user = userRepo.findByEmail(auth.getName()).orElseThrow();
+
         StudentProfile student = studentProfileRepo.findByUser(user)
-                .orElseThrow(()-> new RuntimeException("Supervisor Not Found"));
+                .orElseThrow(()-> new RuntimeException("Student Not Found"));
 
-        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        //validate file type
+        String contentType = file.getContentType();
+        if (contentType == null ||
+                (!contentType.equals("image/jpeg")
+                && !contentType.equals("image/png")
+                && !contentType.equals("image/webp"))) {
+            return ResponseEntity.badRequest().body("Only JPG, PNG, WEBP allowed");
+        }
 
+        //validate size (5MB)
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return ResponseEntity.badRequest().body("File is too large(max 5MB)");
+        }
+
+        //create folder if not exists
         Path uploadPath = Paths.get(uploadDir);
-        if(!Files.exists(uploadPath)) {
+        if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
+
+        //delete old image
+        if (student.getProfileImagePath() != null) {
+            Path oldFile = uploadPath.resolve(student.getProfileImagePath());
+            Files.deleteIfExists(oldFile);
+        }
+
+        //save new file
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path filePath = uploadPath.resolve(fileName);
+
+        Files.copy(file.getInputStream(), filePath);
 
         student.setProfileImagePath(fileName);
         studentProfileRepo.save(student);
@@ -113,8 +140,14 @@ public class StudentProfileController {
         Path path = Paths.get(uploadDir).resolve(fileName);
         Resource resource = new UrlResource(path.toUri());
 
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String contentType = Files.probeContentType(path);
+
         return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
+                .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
     }
 

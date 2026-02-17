@@ -12,6 +12,7 @@ import com.example.fypmsbackend.repository.DocumentationRepository;
 import com.example.fypmsbackend.repository.GithubRepository;
 import com.example.fypmsbackend.security.AuthHelper;
 import com.example.fypmsbackend.student.StudentProfile;
+import com.example.fypmsbackend.student.StudentProfileRepository;
 import com.example.fypmsbackend.submission.Submission;
 import com.example.fypmsbackend.submission.SubmissionRepository;
 import com.example.fypmsbackend.user.User;
@@ -32,9 +33,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/supervisor")
@@ -52,6 +55,7 @@ public class SupervisorProfileController {
     private final AnalyticsRepository analyticsRepo;
     private final GradeRepository  gradeRepo;
     private final SupervisorStudentService supervisorStudentService;
+    private final StudentProfileRepository studentRepo;
 
 
     //PROFILE
@@ -85,23 +89,50 @@ public class SupervisorProfileController {
         return supervisorProfileRepo.findByUserId(user.getId()).orElseThrow();
 
     }
-    @Value("${file.upload-dir")
+    @Value("${file.upload-dir}")
     private String uploadDir;
-    @PutMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/upload-profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProfileImage(
-            @RequestBody("file") MultipartFile file,
-            @AuthenticationPrincipal User user
+            @RequestParam("file") MultipartFile file,
+            Authentication auth
             ) throws IOException {
+
+        User user = userRepo.findByEmail(auth.getName()).orElseThrow();
 
         SupervisorProfile supervisor = supervisorProfileRepo.findByUser(user)
                 .orElseThrow(()-> new RuntimeException("Supervisor Not Found"));
 
-        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        //validate file type
+        String contentType = file.getContentType();
+        if (contentType == null ||
+                (!contentType.equals("image/jpeg")
+                && !contentType.equals("image/png")
+                && !contentType.equals("image/webp"))) {
+            return ResponseEntity.badRequest().body("Only JPG, PNG, WEBP allowed");
+        }
 
+        //validate size(5MB)
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return ResponseEntity.badRequest().body("File is too large (max 5MB)");
+        }
+
+        //create folder if not exists
         Path uploadPath = Paths.get(uploadDir);
-        if(!Files.exists(uploadPath)) {
+        if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
+
+        //delete old image
+        if (supervisor.getProfileImagePath() != null) {
+            Path oldFile = uploadPath.resolve(supervisor.getProfileImagePath());
+            Files.deleteIfExists(oldFile);
+        }
+
+        //save new file
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path filePath = uploadPath.resolve(fileName);
+
+        Files.copy(file.getInputStream(), filePath);
 
         supervisor.setProfileImagePath(fileName);
         supervisorProfileRepo.save(supervisor);
@@ -114,18 +145,53 @@ public class SupervisorProfileController {
         Path path = Paths.get(uploadDir).resolve(fileName);
         Resource resource = new UrlResource(path.toUri());
 
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String contentType = Files.probeContentType(path);
+
         return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
+                .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
     }
 
     //STUDENTS
     @GetMapping("/students")
-    public List<StudentProfile> myStudents(
-            @RequestParam String fullName,
-            @RequestParam String registrationNumber){
+    public List<Map<String, Object>> myStudents() {
 
-        return supervisorStudentService.getMyStudents(fullName, registrationNumber);
+        User supervisor = authHelper.getCurrentUser();
+
+        List<StudentProfile> students =
+                supervisorStudentService.getMyStudents();
+
+        return students.stream().map(student -> {
+
+            Submission sub = submissionRepo
+                    .findByStudentProfileId(student.getId()).orElse(null);
+
+            int approvedCount = 0;
+            int total = 5; //title. proposal, report, GitHub, snapshots
+
+            if (sub != null) {
+                if (sub.isTitleApproved()) approvedCount++;
+                if (sub.isProposalApproved()) approvedCount++;
+                if (sub.isFinalReportApproved())  approvedCount++;
+                if (sub.isGithubLinkApproved()) approvedCount++;
+                if (sub.isSnapshotsApproved()) approvedCount++;
+            }
+
+            int progress = (approvedCount * 100) / total;
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", student.getId());
+            map.put("fullName", student.getFullName());
+            map.put("registrationNumber", student.getRegistrationNumber());
+            map.put("progress", progress);
+
+            return map;
+
+        }).collect(Collectors.toList());
 
     }
 
@@ -174,7 +240,7 @@ public class SupervisorProfileController {
     public List<Documentation> getDocs(@PathVariable Long studentProfileId) {
         return documentationRepo.findByStudentProfileId(studentProfileId);
     }
-    @GetMapping("/docs/{docId}/comment")
+    @PostMapping("/docs/{docId}/comment")
     public Documentation commentOnDoc(@PathVariable Long docId,
                                       @RequestBody String comment) {
         Documentation doc = documentationRepo.findById(docId).orElseThrow();
@@ -185,7 +251,7 @@ public class SupervisorProfileController {
     //GITHUB
     @GetMapping("/github/{studentProfileId}")
     public Github getGithub(@PathVariable Long studentProfileId) {
-        return githubRepo.findById(studentProfileId).orElseThrow();
+        return githubRepo.findByStudentProfileId(studentProfileId);
     }
     @PostMapping("/github/{Id}/comment")
     public Github commentOnGithub(@PathVariable Long Id,
@@ -198,11 +264,18 @@ public class SupervisorProfileController {
     //GRADES
     @GetMapping("/grades/{studentId}")
     public Grade getGrade(@PathVariable Long studentId) {
-        return gradeRepo.findById(studentId).orElseThrow();
+        return gradeRepo.findByStudentProfileId(studentId);
     }
     @PostMapping("/grades/{studentId}")
     public Grade saveGrade(@PathVariable Long studentId,
                            @RequestBody Grade grade) {
+        User supervisor = authHelper.getCurrentUser();
+
+        StudentProfile student =
+                studentRepo.findById(studentId).orElseThrow();
+
+        grade.setStudentProfile(student);
+        grade.setSupervisorProfile(supervisor);
         grade.setTotal(
                 grade.getProposal() +
                         grade.getProgress() +
@@ -211,11 +284,26 @@ public class SupervisorProfileController {
         );
         return gradeRepo.save(grade);
     }
+    @PostMapping("/grades/{studentId}/submit")
+    public Grade submitGrade(@PathVariable Long studentId) {
+
+        Grade grade = gradeRepo
+                .findByStudentProfileId(studentId);
+
+        if (grade == null) {
+            throw new RuntimeException("Grade not found");
+        }
+
+        grade.setSentToAdmin(true);
+
+        return gradeRepo.save(grade);
+
+    }
 
     //ANALYTICS
     @GetMapping("/analytics/{studentProfileId}")
     public Analytics getAnalytics(@PathVariable Long studentProfileId) {
-        return analyticsRepo.findById(studentProfileId).orElseThrow();
+        return analyticsRepo.findByStudentProfileId(studentProfileId);
     }
 
 }

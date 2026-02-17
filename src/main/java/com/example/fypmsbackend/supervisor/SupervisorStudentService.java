@@ -1,5 +1,6 @@
 package com.example.fypmsbackend.supervisor;
 
+import com.example.fypmsbackend.security.AuthHelper;
 import com.example.fypmsbackend.student.StudentProfile;
 import com.example.fypmsbackend.student.StudentProfileRepository;
 import com.example.fypmsbackend.user.User;
@@ -16,17 +17,12 @@ public class SupervisorStudentService {
     private final StudentProfileRepository studentRepo;
     private final SupervisorProfileRepository supervisorRepo;
     private final UserRepository userRepo;
+    private final AuthHelper authHelper;
 
-    public List<StudentProfile> getMyStudents(String fullName,
-                                              String registrationNumber) {
+    public List<StudentProfile> getMyStudents() {
+        User supervisor = authHelper.getCurrentUser();
 
-        User user = userRepo.findByFullName(fullName)
-                .orElseThrow(()-> new RuntimeException("User not found"));
-
-        SupervisorProfile supervisor = supervisorRepo.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Supervisor not found"));
-
-        return studentRepo.findBySupervisor(supervisor);
+        return studentRepo.findBySupervisor_Id(supervisor.getId());
 
     }
 }

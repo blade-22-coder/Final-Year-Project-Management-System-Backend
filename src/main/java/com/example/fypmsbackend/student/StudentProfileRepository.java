@@ -13,6 +13,6 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
     Optional<StudentProfile> findByUser(User user);
     List<StudentProfile> findBySupervisorUserEmail(String supervisorEmail);
 
-    List<StudentProfile>findBySupervisor(SupervisorProfile supervisor);
+    List<StudentProfile>findBySupervisor_Id(Long Id);
 
 }

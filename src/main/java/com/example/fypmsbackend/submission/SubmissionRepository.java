@@ -30,11 +30,12 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     }
 
     // ✅ For supervisor / admin: get all submissions for a student
-    List<Submission> findByStudentProfileId(Long studentId);
+    Optional<Submission> findByStudentProfileId(Long studentId);
 
     // ✅ Optional: get one submission by student ID (if needed)
     @Query("SELECT s FROM Submission s WHERE s.studentProfile.id = :studentId ORDER BY s.submittedAt DESC")
     Optional<Submission> findLatestByStudentProfileId(Long studentId);
+
 
     // ✅ Monthly submissions stats
     @Query("""

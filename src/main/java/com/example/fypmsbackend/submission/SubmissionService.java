@@ -113,10 +113,6 @@ public class SubmissionService {
     }
 
     // -------------------- Get Submissions --------------------
-    public List<Submission> getAllByStudent(Long studentId) {
-        return submissionRepo.findByStudentProfileId(studentId);
-    }
-
     public Submission getLatestSubmission(Long studentId) {
         return submissionRepo.findLatestSubmission(studentId);
     }
