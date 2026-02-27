@@ -1,5 +1,6 @@
 package com.example.fypmsbackend.auth;
 
+import com.example.fypmsbackend.dto.AuthResponse;
 import com.example.fypmsbackend.dto.LoginRequest;
 import com.example.fypmsbackend.dto.SignupRequest;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +18,10 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
-        authService.register(request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<AuthResponse> signup(@RequestBody SignupRequest request) {
+        //call register only once
+        AuthResponse response = authService.register(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")

@@ -6,26 +6,29 @@ import com.example.fypmsbackend.dto.SignupRequest;
 import com.example.fypmsbackend.security.JwtUtil;
 import com.example.fypmsbackend.user.User;
 import com.example.fypmsbackend.user.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthService {
     private final UserRepository userRepo;
     private final BCryptPasswordEncoder encoder =  new BCryptPasswordEncoder();
-    private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    public AuthService(UserRepository userRepository) {
-        this.userRepo = userRepository;
-        this.userRepository = userRepository;
-        this.jwtUtil = new JwtUtil();
+    public AuthService(UserRepository userRepo,
+                       JwtUtil jwtUtil) {
+        this.userRepo = userRepo;
+        this.jwtUtil = jwtUtil;
     }
 
-    public  void register(SignupRequest req) {
+    public AuthResponse register(SignupRequest req) {
 
-        if (userRepository.findByEmail(req.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+        if (userRepo.findByEmail(req.getEmail()).isPresent()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Email already exists");
         }
 
         User user = new User();
@@ -33,9 +36,14 @@ public class AuthService {
         user.setEmail(req.getEmail());
         user.setPassword(encoder.encode(req.getPassword()));
         user.setRole(req.getRole());
+        user.setEnabled(true);
         user.setOnboarded(false);
 
-        userRepository.save(user);
+        userRepo.save(user);
+
+        String token = jwtUtil.generateToken(user.getEmail(),  user.getRole());
+
+        return  new AuthResponse(token, user.getRole().name(), user.getId());
 
     }
 
@@ -47,6 +55,8 @@ public class AuthService {
             throw new RuntimeException("Incorrect credentials");
         }
 
-        return new AuthResponse("DUMMY_TOKEN", user.getRole().name());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+
+        return new AuthResponse(token, user.getRole().name(),  user.getId());
     }
 }

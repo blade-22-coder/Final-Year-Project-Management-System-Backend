@@ -1,11 +1,20 @@
 package com.example.fypmsbackend.dto;
 
-public class AuthResponse {
-    public String token;
-    public String role;
+import lombok.Getter;
+import lombok.Setter;
 
-    public AuthResponse(String token, String role) {
+import java.security.PrivilegedAction;
+
+@Getter
+@Setter
+public class AuthResponse {
+    private String token;
+    private String role;
+    private Long userId;
+
+    public AuthResponse(String token, String role,  Long userId) {
         this.token = token;
         this.role = role;
+        this.userId = userId;
     }
 }

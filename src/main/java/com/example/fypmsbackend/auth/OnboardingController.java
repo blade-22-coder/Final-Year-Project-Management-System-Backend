@@ -2,8 +2,11 @@ package com.example.fypmsbackend.auth;
 
 import com.example.fypmsbackend.student.StudentOnboardingRequest;
 import com.example.fypmsbackend.supervisor.SupervisorOnboardingRequest;
+import com.example.fypmsbackend.user.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/onboarding")
@@ -16,18 +19,22 @@ public class OnboardingController {
         this.service = service;
     }
 
-    @PostMapping("/student/{userId}")
-    public ResponseEntity<?> student(@PathVariable Long userId,
-                                     @RequestBody StudentOnboardingRequest req) {
-        service.onboardStudent(userId, req);
-        return ResponseEntity.ok().build();
+    @PostMapping("/student")
+    public ResponseEntity<?> student(
+                                     @RequestBody StudentOnboardingRequest req,
+                                     Principal principal) {
+
+        User user = service.onboardStudent(principal.getName(), req);
+        return ResponseEntity.ok(user);
     }
 
-    @PostMapping("/supervisor/{userId}")
-    public ResponseEntity<?> supervisor(@PathVariable Long userId,
-                                        @RequestBody SupervisorOnboardingRequest req) {
-        service.onboardSupervisor(userId, req);
-        return ResponseEntity.ok().build();
+    @PostMapping("/supervisor")
+    public ResponseEntity<?> supervisor(
+                                        @RequestBody SupervisorOnboardingRequest req,
+                                        Principal principal) {
+
+        User  user = service.onboardSupervisor(principal.getName(), req);
+        return ResponseEntity.ok(user);
     }
 
 }

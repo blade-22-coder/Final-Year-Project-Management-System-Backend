@@ -8,6 +8,7 @@ import com.example.fypmsbackend.user.User;
 import com.example.fypmsbackend.student.StudentProfileRepository;
 import com.example.fypmsbackend.supervisor.SupervisorProfileRepository;
 import com.example.fypmsbackend.user.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,8 +26,9 @@ public class OnboardingService {
         this.supervisorRepo = supervisorRepo;
     }
 
-    public void onboardStudent(Long userId, StudentOnboardingRequest req) {
-        User user = userRepo.findById(userId)
+    @Transactional
+    public User onboardStudent(String email, StudentOnboardingRequest req) {
+        User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if(user.isOnboarded()) {
@@ -42,11 +44,12 @@ public class OnboardingService {
         studentRepo.save(profile);
 
         user.setOnboarded(true);
-        userRepo.save(user);
+        return userRepo.save(user);
     }
 
-    public void onboardSupervisor(Long userId, SupervisorOnboardingRequest req) {
-        User user = userRepo.findById(userId)
+    @Transactional
+    public User onboardSupervisor(String email, SupervisorOnboardingRequest req) {
+        User user = userRepo.findByEmail(email)
                 .orElseThrow(()  -> new RuntimeException("User not found"));
 
         SupervisorProfile profile = new SupervisorProfile();
@@ -58,7 +61,7 @@ public class OnboardingService {
         supervisorRepo.save(profile);
 
         user.setOnboarded(true);
-        userRepo.save(user);
+        return userRepo.save(user);
 
     }
 

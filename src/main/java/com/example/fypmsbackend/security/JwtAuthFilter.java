@@ -1,6 +1,7 @@
 package com.example.fypmsbackend.security;
 
 
+import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,29 +40,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+            String token = authHeader.substring(7); //remove "Bearer"
+
+            String email = jwtUtil.extractEmail(token);
+            String role = jwtUtil.extractRole(token);
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
         }
 
-        String token = authHeader.substring(7);
-        String email = jwtUtil.extractEmail(token);
-
-        String role = (String) io.jsonwebtoken.Jwts.parser()
-                .setSigningKey("super-secret-key")
-                .parseClaimsJws(token)
-                .getBody()
-                .get("role");
-
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                        );
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                        filterChain.doFilter(request, response);
-
-
+        //always continue the filter chain
+        filterChain.doFilter(request, response);
     }
 
 }

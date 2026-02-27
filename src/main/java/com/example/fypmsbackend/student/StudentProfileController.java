@@ -34,9 +34,9 @@ public class StudentProfileController {
 
     private final AuthHelper authHelper;
 
-    private UserRepository userRepo;
-    private StudentProfileRepository studentProfileRepo;
-    private SubmissionRepository submissionRepo;
+    private final UserRepository userRepo;
+    private final StudentProfileRepository studentProfileRepo;
+    private final SubmissionRepository submissionRepo;
     private final BatteryService  batteryService;
 
     //HELPER METHODS
@@ -84,7 +84,7 @@ public class StudentProfileController {
     public StudentProfile myProfile() {
         return getCurrentStudentProfile();
     }
-    @Value("${file.upload-dir")
+    @Value("${file.upload-dir}")
     private String uploadDir;
     @PutMapping(value = "/upload-profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProfileImage(
