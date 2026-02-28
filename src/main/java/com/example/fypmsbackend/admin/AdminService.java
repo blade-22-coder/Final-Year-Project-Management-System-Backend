@@ -32,21 +32,17 @@ public class AdminService {
 
     public AdminStats getStats() {
 
-        long students = studentRepo.count();
-        long supervisors = supervisorRepo.count();
+        long students = userRepo.countByRole(Role.STUDENT);
+        long supervisors = userRepo.countByRole(Role.SUPERVISOR);
+        long admins = userRepo.countByRole(Role.ADMIN);
+
         long proposals = submissionRepo.countByProposalSubmittedTrue();
         long reports = submissionRepo.countByFinalReportSubmittedTrue();
 
-        Map<String, Long> submissionsByStatus = Map.of(
-                "APPROVED", submissionRepo.countByStatus(Status.APPROVED),
-                "PENDING", submissionRepo.countByStatus(Status.PENDING),
-                "REJECTED", submissionRepo.countByStatus(Status.REJECTED)
-        );
+        long approved = submissionRepo.countByStatus(Status.APPROVED);
+        long rejected = submissionRepo.countByStatus(Status.REJECTED);
+        long pending = submissionRepo.countByStatus(Status.PENDING);
 
-        Map<String, Long> userByRole = Map.of(
-                "STUDENT", userRepo.countByRole(Role.STUDENT),
-                "SUPERVISOR", userRepo.countByRole(Role.SUPERVISOR)
-        );
 
         List<ActivityPoint> activity =
                 submissionRepo.monthlySubmissions()
@@ -62,8 +58,10 @@ public class AdminService {
                 supervisors,
                 proposals,
                 reports,
-                submissionsByStatus,
-                userByRole,
+                approved,
+                rejected,
+                pending,
+                admins,
                 activity
         );
     }

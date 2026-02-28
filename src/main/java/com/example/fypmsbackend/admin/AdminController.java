@@ -97,7 +97,7 @@ public class AdminController {
     public void unassign(@PathVariable long studentId) {
         StudentProfile student =  studentRepo.findById(studentId).orElseThrow();
         student.setSupervisor(null);
-        studentRepo.delete(student);
+        studentRepo.save(student);
     }
 
     //PROJECTS

@@ -13,12 +13,16 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdminStats {
-    private long students;
-    private long supervisors;
-    private long proposals;
-    private long reports;
+    private long totalStudents;
+    private long totalSupervisors;
+    private long totalProposals;
+    private long totalReports;
 
-    private Map<String, Long> submissionsByStatus;
-    private Map<String, Long> userByRole;
-    private List<ActivityPoint> activity;
+    private long approvedCount;
+    private long rejectedCount;
+    private long pendingCount;
+
+    private long totalAdmins;
+
+    private List<ActivityPoint> monthlyActivity;
 }
