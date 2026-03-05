@@ -43,7 +43,7 @@ public class Submission {
 
     @Enumerated(EnumType.STRING)
     private Status status; //waiting, pending, approved, rejected
-    private String comment;
+    private String comments;
     private LocalDateTime submittedAt;
     private String FileName;
     

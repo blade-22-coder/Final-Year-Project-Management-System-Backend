@@ -1,10 +1,11 @@
 package com.example.fypmsbackend.student;
 
+import com.example.fypmsbackend.model.Notification;
+import com.example.fypmsbackend.repository.NotificationRepository;
 import com.example.fypmsbackend.security.AuthHelper;
 import com.example.fypmsbackend.service.BatteryService;
 import com.example.fypmsbackend.submission.Submission;
 import com.example.fypmsbackend.submission.SubmissionRepository;
-import com.example.fypmsbackend.supervisor.SupervisorProfile;
 import com.example.fypmsbackend.user.User;
 import com.example.fypmsbackend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +15,6 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,6 +38,7 @@ public class StudentProfileController {
     private final StudentProfileRepository studentProfileRepo;
     private final SubmissionRepository submissionRepo;
     private final BatteryService  batteryService;
+    private final NotificationRepository notificationRepository;
 
     //HELPER METHODS
     private StudentProfile getCurrentStudentProfile() {
@@ -169,8 +170,8 @@ public class StudentProfileController {
         StudentProfile student = getCurrentStudentProfile();
         Submission sub = getOrCreateSubmission(student);
 
-        sub.setProjectTitle(githubLink);
-        sub.setTitleSubmitted(true);
+        sub.setGithubLink(githubLink);
+        sub.setGithubLinkSubmitted(true);
 
         return submissionRepo.save(sub);
     }
@@ -180,8 +181,13 @@ public class StudentProfileController {
         StudentProfile student = getCurrentStudentProfile();
         Submission sub = getOrCreateSubmission(student);
 
-        String path = "uploads/proposals/" + file.getOriginalFilename();
-        Files.copy(file.getInputStream(), Path.of(path));
+        Path uploadPath = Paths.get("uploads/proposals");
+        if(!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+        String path = UUID.randomUUID()+"_"+file.getOriginalFilename();
+        Path filePath = uploadPath.resolve(path);
+
+        Files.copy(file.getInputStream(), filePath);
 
         sub.setProposalUrl(path);
         sub.setProposalSubmitted(true);
@@ -194,8 +200,13 @@ public class StudentProfileController {
         StudentProfile student = getCurrentStudentProfile();
         Submission sub = getOrCreateSubmission(student);
 
-        String path = "uploads/finalReports/" + file.getOriginalFilename();
-        Files.copy(file.getInputStream(), Path.of(path));
+        Path uploadPath = Paths.get("uploads/finalReports");
+        if(!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+        String path = UUID.randomUUID()+"_"+ file.getOriginalFilename();
+        Path filePath = uploadPath.resolve(path);
+
+        Files.copy(file.getInputStream(), filePath);
 
         sub.setFinalReportUrl(path);
         sub.setFinalReportSubmitted(true);
@@ -203,15 +214,24 @@ public class StudentProfileController {
         return submissionRepo.save(sub);
     }
     @PostMapping("/submit/snapshots")
-    public Submission uploadSnapshots(@RequestParam MultipartFile file) throws IOException {
+    public Submission uploadSnapshots(@RequestParam MultipartFile[] files ) throws IOException {
 
         StudentProfile student = getCurrentStudentProfile();
         Submission sub = getOrCreateSubmission(student);
 
-        String path = "uploads/snapshots/" + file.getOriginalFilename();
-        Files.copy(file.getInputStream(), Path.of(path));
+        Path uploadPath = Paths.get("uploads/snapshots");
+        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
 
-        sub.setSnapshotsUrl(path);
+        StringBuilder paths = new StringBuilder();
+
+        for (MultipartFile file : files) {
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath);
+            paths.append(fileName).append(";");
+        }
+
+        sub.setSnapshotsUrl(paths.toString());
         sub.setSnapshotsSubmitted(true);
 
         return submissionRepo.save(sub);
@@ -243,5 +263,26 @@ public class StudentProfileController {
                 "githubLinkApproved", sub.isGithubLinkApproved(),
                 "snapshotsApproved", sub.isSnapshotsApproved()
         );
+    }
+
+    //COMMENTS
+    @GetMapping("/comments")
+    public ResponseEntity<?> getComments() {
+        StudentProfile student = getCurrentStudentProfile();
+        Submission sub = submissionRepo.findLatestByStudentProfileId(student.getId())
+                .orElseThrow(() -> new RuntimeException("Submission not found"));
+
+        //assuming submission has a getComments() method
+        return ResponseEntity.ok(sub.getComments());
+    }
+
+    //NOTIFICATIONS
+    @GetMapping("/notifications")
+    public ResponseEntity<?> getNotifications() {
+        User user = authHelper.getCurrentUser();
+
+        //fetch notifications from DB, ordered by latest
+        List<Notification> notifications = notificationRepository.findByUserOrderByCreatedAtDesc(user);
+        return ResponseEntity.ok(notifications);
     }
 }
