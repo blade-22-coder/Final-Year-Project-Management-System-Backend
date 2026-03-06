@@ -226,6 +226,7 @@ public class SupervisorProfileController {
         c.setMessage(message);
         c.setSupervisor(supervisor);
         c.setSubmission(sub);
+
         c.setCreatedAt(LocalDateTime.now());
 
         return commentRepo.save(c);
@@ -304,6 +305,18 @@ public class SupervisorProfileController {
     @GetMapping("/analytics/{studentProfileId}")
     public Analytics getAnalytics(@PathVariable Long studentProfileId) {
         return analyticsRepo.findByStudentProfileId(studentProfileId);
+    }
+
+    //MY STUDENTS
+    @GetMapping("/my-students")
+    public List<StudentProfile> getMyStudents(Authentication auth) {
+
+        String email = auth.getName();
+
+        SupervisorProfile supervisor =
+                supervisorProfileRepo.findByUserEmail(email)
+                        .orElseThrow();
+        return  studentRepo.findBySupervisor(supervisor);
     }
 
 }

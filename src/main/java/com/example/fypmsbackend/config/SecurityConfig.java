@@ -37,11 +37,17 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        .requestMatchers("/api/student/profile-image/**").permitAll()
+                        .requestMatchers("/api/supervisor/profile-image/**").permitAll()
+
                         .requestMatchers("/api/onboarding/student").hasRole("STUDENT")
                         .requestMatchers("/api/onboarding/supervisor").hasRole("SUPERVISOR")
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

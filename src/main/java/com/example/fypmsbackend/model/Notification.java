@@ -3,6 +3,8 @@ package com.example.fypmsbackend.model;
 import com.example.fypmsbackend.user.User;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 public class Notification {
 
@@ -12,6 +14,7 @@ public class Notification {
 
     private String message;
     private String type;
+    private LocalDateTime createdAt;
 
     @ManyToOne
     private User user;

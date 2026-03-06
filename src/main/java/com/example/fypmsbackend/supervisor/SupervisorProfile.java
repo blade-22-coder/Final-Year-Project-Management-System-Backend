@@ -2,6 +2,7 @@ package com.example.fypmsbackend.supervisor;
 
 import com.example.fypmsbackend.student.StudentProfile;
 import com.example.fypmsbackend.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,6 +27,7 @@ public class SupervisorProfile {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "supervisor")
     private List<StudentProfile> studentProfiles;
 
