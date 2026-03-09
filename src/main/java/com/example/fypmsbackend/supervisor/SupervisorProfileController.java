@@ -243,7 +243,23 @@ public class SupervisorProfileController {
     }
 
 
-//    //DOCUMENTATION
+    //DOCUMENTATION
+    @GetMapping("/file/{fileName}")
+    public ResponseEntity<Resource> serveFile(@PathVariable String fileName) throws IOException {
+
+        Path path = Paths.get(uploadDir).resolve(fileName);
+        Resource resource = new UrlResource(path.toUri());
+
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String type = Files.probeContentType(path);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(type))
+                .body(resource);
+    }
 //    @GetMapping("/docs/{studentProfileId}")
 //    public List<Documentation> getDocs(@PathVariable Long studentProfileId) {
 //        return documentationRepo.findByStudentProfileId(studentProfileId);
@@ -279,8 +295,11 @@ public class SupervisorProfileController {
         return githubRepo.save(g);
     }
 
-//    //SNAPSHOTS
-//    @GetMapping("/snapshots/{studentId}")
+    //SNAPSHOTS
+    @GetMapping("/snapshots/{studentId}")
+    public List<Snapshot> getSnapshots(@PathVariable Long studentId) {
+        return snapshotRepo.findByStudentProfile_Id(studentId);
+    }
 //    public ResponseEntity<List<String>> getSnapshots(
 //            @PathVariable Long studentId) {
 //
@@ -355,10 +374,10 @@ public class SupervisorProfileController {
     }
 
     //ANALYTICS
-    @GetMapping("/analytics/{studentProfileId}")
-    public ResponseEntity<?> getAnalytics(@PathVariable Long studentProfileId) {
+    @GetMapping("/analytics/{studentId}")
+    public ResponseEntity<?> getAnalytics(@PathVariable Long studentId) {
 
-        Analytics analytics = analyticsRepo.findByStudentProfileId(studentProfileId);
+        Analytics analytics = analyticsRepo.findByStudentProfileId(studentId);
 
         if (analytics == null) {
             Map<String,Object> empty = new HashMap<>();
@@ -521,9 +540,9 @@ public class SupervisorProfileController {
 
         return ResponseEntity.ok(Map.of(
                 "proposal", sub.getProposalUrl(),
-                "approved", sub.isProposalApproved(),
+                "proposalApproved", sub.isProposalApproved(),
                 "finalReport", sub.getFinalReportUrl(),
-                "approved", sub.isFinalReportApproved()
+                "reportApproved", sub.isFinalReportApproved()
         ));
     }
 

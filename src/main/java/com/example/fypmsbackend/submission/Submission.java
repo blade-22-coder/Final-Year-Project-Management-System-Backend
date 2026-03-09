@@ -39,6 +39,13 @@ public class Submission {
     private boolean githubLinkApproved;
     private boolean snapshotsApproved;
 
+//    //rejected flags
+//    private boolean titleRejected;
+//    private boolean proposalRejected;
+//    private boolean finalReportRejected;
+//    private boolean githubLinkRejected;
+//    private boolean snapshotsRejected;
+
     private String filePath;
 
     @Enumerated(EnumType.STRING)

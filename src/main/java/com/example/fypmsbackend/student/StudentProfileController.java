@@ -295,14 +295,16 @@ public class StudentProfileController {
     }
 
     //COMMENTS
-    @GetMapping("/comments")
+    @GetMapping("/comments/me")
     public ResponseEntity<?> getComments() {
         StudentProfile student = getCurrentStudentProfile();
         Submission sub = submissionRepo.findLatestByStudentProfileId(student.getId())
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
 
         //assuming submission has a getComments() method
-        return ResponseEntity.ok(sub.getComments());
+        return ResponseEntity.ok(
+                sub.getComments() == null ? List.of() : sub.getComments()
+        );
     }
 
     //NOTIFICATIONS
@@ -319,5 +321,24 @@ public class StudentProfileController {
     @GetMapping("/deadlines")
     public List<Deadline> getDeadlines() {
         return deadlineRepo.findAll();
+    }
+
+    @GetMapping("/files/{folder}/{fileName}")
+    public ResponseEntity<Resource> getFile(
+            @PathVariable String folder,
+            @PathVariable String fileName) throws IOException {
+
+        Path path = Paths.get("uploads/"+folder).resolve(fileName);
+        Resource resource = new UrlResource(path.toUri());
+
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String type = Files.probeContentType(path);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(type))
+                .body(resource);
     }
 }

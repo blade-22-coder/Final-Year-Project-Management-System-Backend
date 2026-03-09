@@ -17,7 +17,7 @@ public class Snapshot {
     private String filePath;
 
     @ManyToOne
-    @JoinColumn(name = "submissio_id")
+    @JoinColumn(name = "submission_id")
     private Submission submission;
 
     @ManyToOne

@@ -9,5 +9,5 @@ public interface SnapshotRepository extends JpaRepository<Snapshot,Long> {
 
     List<Snapshot> findAllByStudentProfileId(Long studentId);
 
-    List<Snapshot> findByStudentProfileId(Long studentId);
+    List<Snapshot> findByStudentProfile_Id(Long studentId);
 }
