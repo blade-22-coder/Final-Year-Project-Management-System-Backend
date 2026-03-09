@@ -52,4 +52,5 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     long countByFinalReportSubmittedTrue();
 
 
+    Optional<Submission> findTopByStudentProfileIdOrderBySubmittedAtDesc(Long studentId);
 }

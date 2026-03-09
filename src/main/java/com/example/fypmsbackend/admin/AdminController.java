@@ -123,6 +123,7 @@ public class AdminController {
     @PostMapping("deadlines")
     public Deadline saveDeadline(@RequestBody Deadline d) {
         d.setCreatedAt(LocalDateTime.now());
+
         return deadlineRepo.save(d);
     }
     @GetMapping("/deadlines")

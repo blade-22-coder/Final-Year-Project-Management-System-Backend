@@ -1,15 +1,11 @@
 package com.example.fypmsbackend.supervisor;
 
+import com.example.fypmsbackend.deadline.Deadline;
+import com.example.fypmsbackend.deadline.DeadlineRepository;
 import com.example.fypmsbackend.grade.Grade;
 import com.example.fypmsbackend.grade.GradeRepository;
-import com.example.fypmsbackend.model.Analytics;
-import com.example.fypmsbackend.model.Comment;
-import com.example.fypmsbackend.model.Documentation;
-import com.example.fypmsbackend.model.Github;
-import com.example.fypmsbackend.repository.AnalyticsRepository;
-import com.example.fypmsbackend.repository.CommentRepository;
-import com.example.fypmsbackend.repository.DocumentationRepository;
-import com.example.fypmsbackend.repository.GithubRepository;
+import com.example.fypmsbackend.model.*;
+import com.example.fypmsbackend.repository.*;
 import com.example.fypmsbackend.security.AuthHelper;
 import com.example.fypmsbackend.student.StudentProfile;
 import com.example.fypmsbackend.student.StudentProfileRepository;
@@ -21,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -56,6 +53,8 @@ public class SupervisorProfileController {
     private final GradeRepository  gradeRepo;
     private final SupervisorStudentService supervisorStudentService;
     private final StudentProfileRepository studentRepo;
+    private final DeadlineRepository deadlineRepo;
+    private final SnapshotRepository snapshotRepo;
 
 
     //PROFILE
@@ -157,18 +156,25 @@ public class SupervisorProfileController {
     }
 
     //STUDENTS
-    @GetMapping("/students")
-    public List<Map<String, Object>> myStudents() {
+    @GetMapping("/my-students")
+    public List<Map<String, Object>> getmyStudents(Authentication auth) {
 
-        User supervisor = authHelper.getCurrentUser();
+        //Get supervisor
+        String email =  auth.getName();
+        SupervisorProfile supervisor =
+                supervisorProfileRepo.findByUserEmail(email)
+                        .orElseThrow(()-> new RuntimeException("Supervisor Not Found"));
 
+        //Fetch all students supervised by this
         List<StudentProfile> students =
-                supervisorStudentService.getMyStudents();
+                studentRepo.findBySupervisor(supervisor);
 
+        //Map @ student to JSON for progress
         return students.stream().map(student -> {
 
+            //Get latest submission for particular student
             Submission sub = submissionRepo
-                    .findByStudentProfileId(student.getId()).orElse(null);
+                    .findLatestByStudentProfileId(student.getId()).orElse(null);
 
             int approvedCount = 0;
             int total = 5; //title. proposal, report, GitHub, snapshots
@@ -185,8 +191,9 @@ public class SupervisorProfileController {
 
             Map<String, Object> map = new HashMap<>();
             map.put("id", student.getId());
-            map.put("fullName", student.getFullName());
+            map.put("fullName", student.getUser().getFullName());
             map.put("registrationNumber", student.getRegistrationNumber());
+            map.put("profileImage", student.getProfileImagePath());
             map.put("progress", progress);
 
             return map;
@@ -218,15 +225,14 @@ public class SupervisorProfileController {
     //COMMENTS
     @PostMapping("/comments/{submissionId}")
     public Comment addComment(@PathVariable Long submissionId,
-                              @RequestParam String message) {
+                              @RequestBody Map<String,String> payload) {
         User supervisor = authHelper.getCurrentUser();
         Submission sub = submissionRepo.findById(submissionId).orElseThrow();
 
         Comment c = new Comment();
-        c.setMessage(message);
+        c.setMessage(payload.get("message"));
         c.setSupervisor(supervisor);
         c.setSubmission(sub);
-
         c.setCreatedAt(LocalDateTime.now());
 
         return commentRepo.save(c);
@@ -236,30 +242,77 @@ public class SupervisorProfileController {
         return commentRepo.findBySubmissionId(submissionId);
     }
 
-    //DOCUMENTATION
-    @GetMapping("/docs/{studentProfileId}")
-    public List<Documentation> getDocs(@PathVariable Long studentProfileId) {
-        return documentationRepo.findByStudentProfileId(studentProfileId);
-    }
-    @PostMapping("/docs/{docId}/comment")
-    public Documentation commentOnDoc(@PathVariable Long docId,
-                                      @RequestBody String comment) {
-        Documentation doc = documentationRepo.findById(docId).orElseThrow();
-        doc.setSupervisorComment(comment);
-        return documentationRepo.save(doc);
-    }
 
-    //GITHUB
-    @GetMapping("/github/{studentProfileId}")
-    public Github getGithub(@PathVariable Long studentProfileId) {
-        return githubRepo.findByStudentProfileId(studentProfileId);
-    }
+//    //DOCUMENTATION
+//    @GetMapping("/docs/{studentProfileId}")
+//    public List<Documentation> getDocs(@PathVariable Long studentProfileId) {
+//        return documentationRepo.findByStudentProfileId(studentProfileId);
+//    }
+//    @PostMapping("/docs/{docId}/comment")
+//    public Documentation commentOnDoc(@PathVariable Long docId,
+//                                      @RequestBody String comment) {
+//        Documentation doc = documentationRepo.findById(docId).orElseThrow();
+//        doc.setSupervisorComment(comment);
+//        return documentationRepo.save(doc);
+//    }
+
+//    //GITHUB
+//    @GetMapping("/github/{studentProfileId}")
+//    public ResponseEntity<?> getGithub(@PathVariable Long studentProfileId) {
+//
+//        Github github = githubRepo.findByStudentProfileId(studentProfileId);
+//
+//        if (github == null) {
+//            return ResponseEntity.ok(Map.of(
+//                    "repoUrl", "Not submitted yet",
+//                    "lastCommit", "N/A",
+//                    "id",0
+//            ));
+//        }
+//        return ResponseEntity.ok(github);
+//    }
     @PostMapping("/github/{Id}/comment")
     public Github commentOnGithub(@PathVariable Long Id,
                                   @RequestBody String comment) {
         Github g  = githubRepo.findById(Id).orElseThrow();
         g.setSupervisorComment(comment);
         return githubRepo.save(g);
+    }
+
+//    //SNAPSHOTS
+//    @GetMapping("/snapshots/{studentId}")
+//    public ResponseEntity<List<String>> getSnapshots(
+//            @PathVariable Long studentId) {
+//
+//        //Try fetching snapshots from latest submission
+//        Submission sub = submissionRepo
+//                .findTopByStudentProfileIdOrderBySubmittedAtDesc(studentId)
+//                .orElse(null);
+//
+//        if (sub != null && sub.getSnapshotsUrl() != null) {
+//            return ResponseEntity.ok(sub.getSnapshotsUrl());
+//        }
+//
+//        //Fallback: fetch all snapshots
+//        List<String> snapshots = snapshotRepo.findByStudentProfileId(studentId);
+//
+//        return ResponseEntity.ok(snapshots);
+//
+//    }
+    @GetMapping("/snapshots/file/{fileName}")
+    public ResponseEntity<Resource> serveSnapshot(
+            @PathVariable String fileName) throws IOException {
+
+        Path path = Paths.get(uploadDir).resolve(fileName);
+        Resource resource = new UrlResource(path.toUri());
+
+        if (!resource.exists())
+            return ResponseEntity.notFound().build();
+
+        String type = Files.probeContentType(path);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(type))
+                .body(resource);
     }
 
     //GRADES
@@ -303,20 +356,194 @@ public class SupervisorProfileController {
 
     //ANALYTICS
     @GetMapping("/analytics/{studentProfileId}")
-    public Analytics getAnalytics(@PathVariable Long studentProfileId) {
-        return analyticsRepo.findByStudentProfileId(studentProfileId);
+    public ResponseEntity<?> getAnalytics(@PathVariable Long studentProfileId) {
+
+        Analytics analytics = analyticsRepo.findByStudentProfileId(studentProfileId);
+
+        if (analytics == null) {
+            Map<String,Object> empty = new HashMap<>();
+            empty.put("progress", List.of(0,0,0,0));
+            empty.put("repoCommits", List.of(0,0,0,0));
+            return ResponseEntity.ok(empty);
+        }
+        return ResponseEntity.ok(analytics);
     }
 
-    //MY STUDENTS
-    @GetMapping("/my-students")
-    public List<StudentProfile> getMyStudents(Authentication auth) {
-
-        String email = auth.getName();
-
-        SupervisorProfile supervisor =
-                supervisorProfileRepo.findByUserEmail(email)
-                        .orElseThrow();
-        return  studentRepo.findBySupervisor(supervisor);
+    //DEADLINES
+    @GetMapping("/deadlines")
+    public List<Deadline> getDeadlines() {
+        return deadlineRepo.findAll();
     }
+
+    //APPROVAL
+    //TITLE
+    @PutMapping("/{studentId}/title/approve")
+    public Submission approveTitle(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setTitleApproved(true);
+        return submissionRepo.save(sub);
+    }
+    @PutMapping(("/{studentId}/title/reject"))
+    public Submission rejectTitle(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setTitleApproved(false);
+        return submissionRepo.save(sub);
+    }
+
+    //PROPOSAL
+    @PutMapping("/{studentId}/proposal/approve")
+    public Submission approveProposal(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setProposalApproved(true);
+        return submissionRepo.save(sub);
+    }
+    @PutMapping(("/{studentId}/proposal/reject"))
+    public Submission rejectProposal(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setProposalApproved(false);
+        return submissionRepo.save(sub);
+    }
+
+    //FINAL REPORT
+    @PutMapping("/{studentId}/finalReport/approve")
+    public Submission approveFinalReport(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setFinalReportApproved(true);
+        return submissionRepo.save(sub);
+    }
+    @PutMapping(("/{studentId}/finalReport/reject"))
+    public Submission rejectFinalReport(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setFinalReportApproved(false);
+        return submissionRepo.save(sub);
+    }
+
+    //GITHUB
+    @PutMapping("/{studentId}/githubLink/approve")
+    public Submission approveGithubLink(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setGithubLinkApproved(true);
+        return submissionRepo.save(sub);
+    }
+    @PutMapping(("/{studentId}/githubLink/reject"))
+    public Submission rejectGithubLink(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setGithubLinkApproved(false);
+        return submissionRepo.save(sub);
+    }
+
+    //SNAPSHOTS
+    @PutMapping("/{studentId}/snapshots/approve")
+    public Submission approveSnapshots(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setSnapshotsApproved(true);
+        return submissionRepo.save(sub);
+    }
+    @PutMapping(("/{studentId}/snapshots/reject"))
+    public Submission rejectSnapshots(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElseThrow();
+
+        sub.setSnapshotsApproved(false);
+        return submissionRepo.save(sub);
+    }
+
+    //SPECIFIC STUDENT SUBMISSIONS
+    @GetMapping("/title/{studentId}")
+    public ResponseEntity<?> getProjectTitle(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findTopByStudentProfileIdOrderBySubmittedAtDesc(studentId)
+                .orElse(null);
+
+        if(sub == null || sub.getProjectTitle() == null) {
+            return ResponseEntity.ok(Map.of("title", null));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "title", sub.getProjectTitle(),
+                "approved", sub.isTitleApproved()
+        ));
+    }
+
+    @GetMapping("/docs/{studentId}")
+    public ResponseEntity<?> getDocumentation(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findTopByStudentProfileIdOrderBySubmittedAtDesc(studentId)
+                .orElse(null);
+
+        if(sub == null || sub.getProposalUrl() == null) {
+            return ResponseEntity.ok(Map.of("proposal", null));
+        }
+
+        if(sub == null || sub.getFinalReportUrl() == null) {
+            return ResponseEntity.ok(Map.of("finalReport", null));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "proposal", sub.getProposalUrl(),
+                "approved", sub.isProposalApproved(),
+                "finalReport", sub.getFinalReportUrl(),
+                "approved", sub.isFinalReportApproved()
+        ));
+    }
+
+    @GetMapping("/github/{studentId}")
+    public ResponseEntity<?> getGithubLink(@PathVariable Long studentId) {
+
+        Submission sub = submissionRepo
+                .findTopByStudentProfileIdOrderBySubmittedAtDesc(studentId)
+                .orElse(null);
+
+        if(sub == null) {
+            return ResponseEntity.ok(Map.of("githubLink", null));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "githubLink", sub.getGithubLink(),
+                "approved", sub.isGithubLinkApproved()
+        ));
+
+    }
+
 
 }

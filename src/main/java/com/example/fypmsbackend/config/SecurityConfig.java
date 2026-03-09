@@ -40,6 +40,9 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/student/profile-image/**").permitAll()
                         .requestMatchers("/api/supervisor/profile-image/**").permitAll()
+                        .requestMatchers("/api/student/submit/**").authenticated()
+                        .requestMatchers("/api/files/submissions/**").authenticated()
+                        .requestMatchers("/api/comment/**").hasAnyRole("STUDENT", "SUPERVISOR")
 
                         .requestMatchers("/api/onboarding/student").hasRole("STUDENT")
                         .requestMatchers("/api/onboarding/supervisor").hasRole("SUPERVISOR")

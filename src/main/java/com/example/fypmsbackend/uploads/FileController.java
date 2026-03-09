@@ -20,11 +20,12 @@ public class FileController {
         this.fileService = fileService;
     }
 
-    @GetMapping
+    @GetMapping("/submissions/{id}")
     public ResponseEntity<Resource> getSubmissions(
             @PathVariable Long id,
             Authentication auth
     ) throws IOException {
+
         return fileService.streamSubmission(id, auth);
     }
 }

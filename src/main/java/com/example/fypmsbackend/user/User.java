@@ -27,7 +27,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    private boolean onboarded = false;
+    private boolean onboarded;
 
     private boolean enabled;
 

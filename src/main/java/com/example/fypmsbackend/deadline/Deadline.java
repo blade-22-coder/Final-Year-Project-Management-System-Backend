@@ -14,33 +14,18 @@ public class Deadline {
 
     private String title;
 
-    private String audience; //students or supervisors
-
-    @ManyToOne
-    private User createdBy; //optional link to Admin
-
+    private LocalDateTime deadlineDate;
     private LocalDateTime createdAt;
 
     //getters & setters
 
 
-    public String getAudience() {
-        return audience;
-    }
-    public void setAudience(String audience) {
-        this.audience = audience;
-    }
+
     public String getTitle() {
         return title;
     }
     public void setTitle(String title) {
         this.title = title;
-    }
-    public User getCreatedBy() {
-        return createdBy;
-    }
-    public void setCreatedBy(User createdBy) {
-        this.createdBy = createdBy;
     }
     public LocalDateTime getCreatedAt() {
         return createdAt;
@@ -48,4 +33,9 @@ public class Deadline {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public LocalDateTime getDeadlineDate() {
+        return deadlineDate;
+    }
+    public void setDeadlineDate(LocalDateTime deadlineDate) {
+        this.deadlineDate = deadlineDate;}
 }

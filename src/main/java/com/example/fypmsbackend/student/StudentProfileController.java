@@ -1,5 +1,7 @@
 package com.example.fypmsbackend.student;
 
+import com.example.fypmsbackend.deadline.Deadline;
+import com.example.fypmsbackend.deadline.DeadlineRepository;
 import com.example.fypmsbackend.model.Notification;
 import com.example.fypmsbackend.repository.NotificationRepository;
 import com.example.fypmsbackend.security.AuthHelper;
@@ -39,6 +41,7 @@ public class StudentProfileController {
     private final SubmissionRepository submissionRepo;
     private final BatteryService  batteryService;
     private final NotificationRepository notificationRepository;
+    private final DeadlineRepository deadlineRepo;
 
     //HELPER METHODS
     private StudentProfile getCurrentStudentProfile() {
@@ -161,6 +164,7 @@ public class StudentProfileController {
 
         sub.setProjectTitle(title);
         sub.setTitleSubmitted(true);
+        sub.setSubmittedAt(LocalDateTime.now());
 
         return submissionRepo.save(sub);
     }
@@ -172,6 +176,7 @@ public class StudentProfileController {
 
         sub.setGithubLink(githubLink);
         sub.setGithubLinkSubmitted(true);
+        sub.setSubmittedAt(LocalDateTime.now());
 
         return submissionRepo.save(sub);
     }
@@ -191,6 +196,7 @@ public class StudentProfileController {
 
         sub.setProposalUrl(path);
         sub.setProposalSubmitted(true);
+        sub.setSubmittedAt(LocalDateTime.now());
 
         return submissionRepo.save(sub);
     }
@@ -210,6 +216,7 @@ public class StudentProfileController {
 
         sub.setFinalReportUrl(path);
         sub.setFinalReportSubmitted(true);
+        sub.setSubmittedAt(LocalDateTime.now());
 
         return submissionRepo.save(sub);
     }
@@ -224,15 +231,29 @@ public class StudentProfileController {
 
         StringBuilder paths = new StringBuilder();
 
+        String firstFile = null;
+
         for (MultipartFile file : files) {
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
             Path filePath = uploadPath.resolve(fileName);
             Files.copy(file.getInputStream(), filePath);
+
+            if (firstFile == null) {
+                firstFile = fileName;
+                sub.setFileName(file.getOriginalFilename());
+                sub.setFilePath(paths.toString());
+            }
             paths.append(fileName).append(";");
         }
 
         sub.setSnapshotsUrl(paths.toString());
         sub.setSnapshotsSubmitted(true);
+        sub.setSubmittedAt(LocalDateTime.now());
+
+        if (files.length >  0) {
+            sub.setFilePath(uploadPath.resolve(paths.toString().split(";")[0]).toString());
+            sub.setFileName(files[0].getOriginalFilename());
+        }
 
         return submissionRepo.save(sub);
     }
@@ -257,12 +278,20 @@ public class StudentProfileController {
 
         return Map.of(
                 "battery", battery,
-                "titleApproved", sub.isTitleApproved(),
-                "proposalApproved", sub.isProposalApproved(),
-                "finalReportApproved", sub.isFinalReportApproved(),
-                "githubLinkApproved", sub.isGithubLinkApproved(),
-                "snapshotsApproved", sub.isSnapshotsApproved()
+                "titleStatus", getStatus(sub.isTitleSubmitted(), sub.isTitleApproved()),
+                "proposalStatus", getStatus(sub.isProposalSubmitted(), sub.isProposalApproved()),
+                "finalReportStatus", getStatus(sub.isFinalReportSubmitted(),sub.isFinalReportApproved()),
+                "githubLinkStatus", getStatus(sub.isGithubLinkSubmitted(), sub.isGithubLinkApproved()),
+                "snapshotsStatus", getStatus(sub.isSnapshotsSubmitted(), sub.isSnapshotsApproved())
         );
+    }
+    private String getStatus(boolean submitted, boolean approved){
+        if (!submitted) return "WAITING";
+        if (submitted && !approved)
+            return "PENDING";
+        if (approved)
+            return "APPROVED";
+        return "REJECTED";
     }
 
     //COMMENTS
@@ -284,5 +313,11 @@ public class StudentProfileController {
         //fetch notifications from DB, ordered by latest
         List<Notification> notifications = notificationRepository.findByUserOrderByCreatedAtDesc(user);
         return ResponseEntity.ok(notifications);
+    }
+
+    //DEADLINES
+    @GetMapping("/deadlines")
+    public List<Deadline> getDeadlines() {
+        return deadlineRepo.findAll();
     }
 }
