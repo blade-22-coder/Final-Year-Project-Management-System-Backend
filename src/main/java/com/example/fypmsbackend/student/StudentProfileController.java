@@ -2,6 +2,7 @@ package com.example.fypmsbackend.student;
 
 import com.example.fypmsbackend.deadline.Deadline;
 import com.example.fypmsbackend.deadline.DeadlineRepository;
+import com.example.fypmsbackend.dto.CommentResponse;
 import com.example.fypmsbackend.model.Notification;
 import com.example.fypmsbackend.repository.NotificationRepository;
 import com.example.fypmsbackend.security.AuthHelper;
@@ -278,33 +279,43 @@ public class StudentProfileController {
 
         return Map.of(
                 "battery", battery,
-                "titleStatus", getStatus(sub.isTitleSubmitted(), sub.isTitleApproved()),
-                "proposalStatus", getStatus(sub.isProposalSubmitted(), sub.isProposalApproved()),
-                "finalReportStatus", getStatus(sub.isFinalReportSubmitted(),sub.isFinalReportApproved()),
-                "githubLinkStatus", getStatus(sub.isGithubLinkSubmitted(), sub.isGithubLinkApproved()),
-                "snapshotsStatus", getStatus(sub.isSnapshotsSubmitted(), sub.isSnapshotsApproved())
+                "titleStatus", getStatus(sub.isTitleSubmitted(), sub.isTitleApproved(), sub.isTitleRejected()),
+                "proposalStatus", getStatus(sub.isProposalSubmitted(), sub.isProposalApproved(), sub.isProposalRejected()),
+                "finalReportStatus", getStatus(sub.isFinalReportSubmitted(),sub.isFinalReportApproved(), sub.isFinalReportRejected()),
+                "githubLinkStatus", getStatus(sub.isGithubLinkSubmitted(), sub.isGithubLinkApproved(), sub.isGithubLinkRejected()),
+                "snapshotsStatus", getStatus(sub.isSnapshotsSubmitted(), sub.isSnapshotsApproved(),sub.isSnapshotsRejected())
         );
     }
-    private String getStatus(boolean submitted, boolean approved){
+    private String getStatus(boolean submitted, boolean approved, boolean rejected){
         if (!submitted) return "WAITING";
-        if (submitted && !approved)
-            return "PENDING";
         if (approved)
             return "APPROVED";
-        return "REJECTED";
+        if (rejected)
+            return "REJECTED";
+        return "PENDING";
     }
 
     //COMMENTS
     @GetMapping("/comments/me")
     public ResponseEntity<?> getComments() {
+
         StudentProfile student = getCurrentStudentProfile();
-        Submission sub = submissionRepo.findLatestByStudentProfileId(student.getId())
+
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(student.getId())
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
 
-        //assuming submission has a getComments() method
-        return ResponseEntity.ok(
-                sub.getComments() == null ? List.of() : sub.getComments()
-        );
+        List<CommentResponse> responses = sub.getComments()
+                .stream()
+                .map(c -> new CommentResponse(
+                        c.getId(),
+                        c.getSubmission(),
+                        c.getMessage(),
+                        c.getCreatedAt()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(responses);
     }
 
     //NOTIFICATIONS

@@ -1,11 +1,13 @@
 package com.example.fypmsbackend.submission;
 
+import com.example.fypmsbackend.model.Comment;
 import com.example.fypmsbackend.model.Status;
 import com.example.fypmsbackend.student.StudentProfile;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -39,18 +41,20 @@ public class Submission {
     private boolean githubLinkApproved;
     private boolean snapshotsApproved;
 
-//    //rejected flags
-//    private boolean titleRejected;
-//    private boolean proposalRejected;
-//    private boolean finalReportRejected;
-//    private boolean githubLinkRejected;
-//    private boolean snapshotsRejected;
+    //rejected flags
+    private boolean titleRejected;
+    private boolean proposalRejected;
+    private boolean finalReportRejected;
+    private boolean githubLinkRejected;
+    private boolean snapshotsRejected;
 
     private String filePath;
 
     @Enumerated(EnumType.STRING)
     private Status status; //waiting, pending, approved, rejected
-    private String comments;
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "submission")
+    private List<Comment> comments;
     private LocalDateTime submittedAt;
     private String FileName;
     

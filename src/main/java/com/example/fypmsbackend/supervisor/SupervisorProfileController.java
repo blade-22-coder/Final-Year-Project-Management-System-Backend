@@ -17,11 +17,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -247,7 +245,17 @@ public class SupervisorProfileController {
     @GetMapping("/file/{fileName}")
     public ResponseEntity<Resource> serveFile(@PathVariable String fileName) throws IOException {
 
-        Path path = Paths.get(uploadDir).resolve(fileName);
+        Path path = Paths.get("uploads/proposals").resolve(fileName);
+
+        System.out.println("Looking for file: " + path.toAbsolutePath());
+
+        if (!Files.exists(path)) {
+            path = Paths.get("uploads/finalReports").resolve(fileName);
+        }
+
+        if (!Files.exists(path)) {
+            path = Paths.get("uploads/snapshots").resolve(fileName);
+        }
         Resource resource = new UrlResource(path.toUri());
 
         if (!resource.exists()) {
@@ -297,32 +305,27 @@ public class SupervisorProfileController {
 
     //SNAPSHOTS
     @GetMapping("/snapshots/{studentId}")
-    public List<Snapshot> getSnapshots(@PathVariable Long studentId) {
-        return snapshotRepo.findByStudentProfile_Id(studentId);
+    public ResponseEntity<?> getSnapshots(@PathVariable Long studentId) {
+
+        //Try fetching snapshots from latest submission
+        Submission sub = submissionRepo
+                .findLatestByStudentProfileId(studentId)
+                .orElse(null);
+
+        if (sub == null || sub.getSnapshotsUrl() == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        //Fallback: fetch all snapshots
+        List<String> snapshots =List.of(sub.getSnapshotsUrl().split(";"));
+        return ResponseEntity.ok(snapshots);
     }
-//    public ResponseEntity<List<String>> getSnapshots(
-//            @PathVariable Long studentId) {
-//
-//        //Try fetching snapshots from latest submission
-//        Submission sub = submissionRepo
-//                .findTopByStudentProfileIdOrderBySubmittedAtDesc(studentId)
-//                .orElse(null);
-//
-//        if (sub != null && sub.getSnapshotsUrl() != null) {
-//            return ResponseEntity.ok(sub.getSnapshotsUrl());
-//        }
-//
-//        //Fallback: fetch all snapshots
-//        List<String> snapshots = snapshotRepo.findByStudentProfileId(studentId);
-//
-//        return ResponseEntity.ok(snapshots);
-//
-//    }
+
     @GetMapping("/snapshots/file/{fileName}")
     public ResponseEntity<Resource> serveSnapshot(
             @PathVariable String fileName) throws IOException {
 
-        Path path = Paths.get(uploadDir).resolve(fileName);
+        Path path = Paths.get("uploads/snapshots").resolve(fileName);
         Resource resource = new UrlResource(path.toUri());
 
         if (!resource.exists())
@@ -336,19 +339,37 @@ public class SupervisorProfileController {
 
     //GRADES
     @GetMapping("/grades/{studentId}")
-    public Grade getGrade(@PathVariable Long studentId) {
-        return gradeRepo.findByStudentProfileId(studentId);
+    public ResponseEntity<?> getGrade(@PathVariable Long studentId) {
+        if (studentId == null) {
+            return ResponseEntity.badRequest().body("Student ID is required");
+        }
+
+        Grade grade = gradeRepo.findByStudentProfileId(studentId);
+
+        if (grade == null) {
+            return ResponseEntity.ok(Map.of(
+                    "proposal",0,
+                    "progress",0,
+                    "finalReport",0,
+                    "presentation",0
+            ));
+        }
+        return ResponseEntity.ok(grade);
     }
     @PostMapping("/grades/{studentId}")
     public Grade saveGrade(@PathVariable Long studentId,
                            @RequestBody Grade grade) {
-        User supervisor = authHelper.getCurrentUser();
+        Grade existing = gradeRepo.findByStudentProfileId(studentId);
+
+        if(existing != null) {
+            grade.setId(existing.getId());
+        }
 
         StudentProfile student =
                 studentRepo.findById(studentId).orElseThrow();
 
         grade.setStudentProfile(student);
-        grade.setSupervisorProfile(supervisor);
+
         grade.setTotal(
                 grade.getProposal() +
                         grade.getProgress() +
@@ -414,6 +435,7 @@ public class SupervisorProfileController {
                 .orElseThrow();
 
         sub.setTitleApproved(false);
+        sub.setTitleRejected(true);
         return submissionRepo.save(sub);
     }
 
@@ -436,6 +458,7 @@ public class SupervisorProfileController {
                 .orElseThrow();
 
         sub.setProposalApproved(false);
+        sub.setProposalRejected(true);
         return submissionRepo.save(sub);
     }
 
@@ -458,6 +481,7 @@ public class SupervisorProfileController {
                 .orElseThrow();
 
         sub.setFinalReportApproved(false);
+        sub.setFinalReportRejected(true);
         return submissionRepo.save(sub);
     }
 
@@ -480,6 +504,7 @@ public class SupervisorProfileController {
                 .orElseThrow();
 
         sub.setGithubLinkApproved(false);
+        sub.setGithubLinkRejected(true);
         return submissionRepo.save(sub);
     }
 
@@ -502,6 +527,7 @@ public class SupervisorProfileController {
                 .orElseThrow();
 
         sub.setSnapshotsApproved(false);
+        sub.setSnapshotsRejected(true);
         return submissionRepo.save(sub);
     }
 
@@ -530,12 +556,11 @@ public class SupervisorProfileController {
                 .findTopByStudentProfileIdOrderBySubmittedAtDesc(studentId)
                 .orElse(null);
 
-        if(sub == null || sub.getProposalUrl() == null) {
-            return ResponseEntity.ok(Map.of("proposal", null));
-        }
-
-        if(sub == null || sub.getFinalReportUrl() == null) {
-            return ResponseEntity.ok(Map.of("finalReport", null));
+        if(sub == null) {
+            return ResponseEntity.ok(Map.of(
+                    "proposal", null,
+                    "finalReport", null
+            ));
         }
 
         return ResponseEntity.ok(Map.of(
@@ -566,3 +591,4 @@ public class SupervisorProfileController {
 
 
 }
+

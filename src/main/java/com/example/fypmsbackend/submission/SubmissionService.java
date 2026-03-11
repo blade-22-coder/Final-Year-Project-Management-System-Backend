@@ -61,11 +61,11 @@ public class SubmissionService {
             // assign file based on type
             switch (type) {
                 case "proposal" -> {
-                    sub.setProposalUrl(path.toString());
+                    sub.setProposalUrl(fileName);
                     sub.setProposalSubmitted(true);
                 }
                 case "finalReport" -> {
-                    sub.setFinalReportUrl(path.toString());
+                    sub.setFinalReportUrl(fileName);
                     sub.setFinalReportSubmitted(true);
                 }
                 case "snapshot" -> {
@@ -118,5 +118,12 @@ public class SubmissionService {
     }
 
     public void submit(MultipartFile file, Authentication auth) {
+
+        String email = auth.getName();
+
+        StudentProfile student = studentRepo.findByUserEmail(email)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        uploadFile(student.getId(), file, "proposal");
     }
 }

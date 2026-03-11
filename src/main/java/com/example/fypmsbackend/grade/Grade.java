@@ -18,7 +18,7 @@ public class Grade {
     @GeneratedValue
     private Long id;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_profile_id")
     private StudentProfile studentprofile;
     
@@ -43,6 +43,12 @@ public class Grade {
     
     private String submission;
     private Integer score;
+
+    @JoinColumn(name = "studentId")
+    private String fullName;
+
+    @JoinColumn(name = "studentId")
+    private String registrationNumber;
 
     public void setscore(Integer score) {
     }

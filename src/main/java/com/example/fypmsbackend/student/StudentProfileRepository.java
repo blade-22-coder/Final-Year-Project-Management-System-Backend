@@ -16,4 +16,6 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
     List<StudentProfile>findBySupervisor_Id(Long Id);
 
     List<StudentProfile> findBySupervisor(SupervisorProfile supervisor);
+
+    Optional<StudentProfile> findByUserEmail(String email);
 }
