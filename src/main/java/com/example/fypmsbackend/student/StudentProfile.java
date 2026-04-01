@@ -26,7 +26,7 @@ public class StudentProfile {
     private String projectTitle;
     private String profileImagePath;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL )
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private User user;
 

@@ -8,6 +8,7 @@ import com.example.fypmsbackend.student.StudentProfileRepository;
 import com.example.fypmsbackend.submission.SubmissionRepository;
 import com.example.fypmsbackend.supervisor.SupervisorProfileRepository;
 import com.example.fypmsbackend.user.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,6 +31,19 @@ public class AdminService {
         this.supervisorRepo = supervisorRepo;
     }
 
+    @Transactional
+    public void deleteStudentById(Long studentId) {
+
+        //delete submission first
+        submissionRepo.deleteByStudentProfileId(studentId);
+
+        //delete student + user
+        var student = studentRepo.findById(studentId).orElseThrow();
+        studentRepo.delete(student);
+        userRepo.delete(student.getUser());
+
+    }
+
     public AdminStats getStats() {
 
         long students = userRepo.countByRole(Role.STUDENT);
@@ -39,17 +53,19 @@ public class AdminService {
         long proposals = submissionRepo.countByProposalSubmittedTrue();
         long reports = submissionRepo.countByFinalReportSubmittedTrue();
 
-        long approved = submissionRepo.countByStatus(Status.APPROVED);
-        long rejected = submissionRepo.countByStatus(Status.REJECTED);
-        long pending = submissionRepo.countByStatus(Status.PENDING);
+        long approvedProposals = submissionRepo.countByProposalApprovedTrue();
+        long rejectedProposals = submissionRepo.countByProposalRejectedTrue();
+
+        long approvedReports = submissionRepo.countByFinalReportApprovedTrue();
+        long rejectedReports = submissionRepo.countByFinalReportRejectedTrue();
 
 
         List<ActivityPoint> activity =
-                submissionRepo.monthlySubmissions()
+                submissionRepo.dailySubmissions()
                         .stream()
                         .map(row -> new ActivityPoint(
                                 row[0].toString(),
-                                (Long) row[1]
+                                ((Number) row[1]).longValue()
                         ))
                         .toList();
 
@@ -58,9 +74,10 @@ public class AdminService {
                 supervisors,
                 proposals,
                 reports,
-                approved,
-                rejected,
-                pending,
+                approvedProposals,
+                rejectedProposals,
+                approvedReports,
+                rejectedReports,
                 admins,
                 activity
         );

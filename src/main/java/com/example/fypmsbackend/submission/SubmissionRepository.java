@@ -1,7 +1,9 @@
 package com.example.fypmsbackend.submission;
 
-import com.example.fypmsbackend.model.Status;
+
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,26 +32,39 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     }
 
     // ✅ For supervisor / admin: get all submissions for a student
-    Optional<Submission> findByStudentProfileId(Long studentId);
+    List<Submission> findByStudentProfileId(Long studentId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Submission s WHERE s.studentProfile.id = :studentId")
+    void deleteByStudentProfileId(@Param("studentId")Long studentId);
 
     // ✅ Optional: get one submission by student ID (if needed)
     @Query("SELECT s FROM Submission s WHERE s.studentProfile.id = :studentId ORDER BY s.submittedAt DESC")
     Optional<Submission> findLatestByStudentProfileId(Long studentId);
 
 
-    // ✅ Monthly submissions stats
-    @Query("""
-        SELECT EXTRACT(MONTH FROM s.submittedAt) AS month,
-               COUNT(s) AS count
-        FROM Submission s
-        GROUP BY EXTRACT(MONTH FROM s.submittedAt)
-        ORDER BY month
-    """)
-    List<Object[]> monthlySubmissions();
+    // ✅ Daily submissions stats
+    @Query(value = """
+        SELECT EXTRACT(DOW FROM submitted_at) AS day_of_week,
+               COUNT(*) AS total
+        FROM submission 
+        GROUP BY day_of_week
+        ORDER BY day_of_week;
+    """, nativeQuery = true)
+    List<Object[]> dailySubmissions();
+
     List<Submission> findBySubmittedAtBetween(LocalDateTime start, LocalDateTime end);
-    long countByStatus(Status status);
+
     long countByProposalSubmittedTrue();
     long countByFinalReportSubmittedTrue();
+
+    long countByProposalApprovedTrue();
+    long countByProposalRejectedTrue();
+    long countByFinalReportApprovedTrue();
+    long countByFinalReportRejectedTrue();
+
+
 
 
     Optional<Submission> findTopByStudentProfileIdOrderBySubmittedAtDesc(Long studentId);

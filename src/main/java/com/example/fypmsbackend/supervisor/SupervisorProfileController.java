@@ -14,24 +14,29 @@ import com.example.fypmsbackend.submission.SubmissionRepository;
 import com.example.fypmsbackend.user.User;
 import com.example.fypmsbackend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.docx4j.Docx4J;
+import org.docx4j.openpackaging.exceptions.Docx4JException;
+import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -244,29 +249,54 @@ public class SupervisorProfileController {
     //DOCUMENTATION
     @GetMapping("/file/{fileName}")
     public ResponseEntity<Resource> serveFile(@PathVariable String fileName) throws IOException {
+        try {
 
-        Path path = Paths.get("uploads/proposals").resolve(fileName);
+            Path path = Paths.get("uploads/proposals").resolve(fileName);
 
-        System.out.println("Looking for file: " + path.toAbsolutePath());
+            System.out.println("Looking for file: " + path.toAbsolutePath());
 
-        if (!Files.exists(path)) {
-            path = Paths.get("uploads/finalReports").resolve(fileName);
+            if (!Files.exists(path)) {
+                path = Paths.get("uploads/finalReports").resolve(fileName);
+            }
+
+            if (!Files.exists(path)) {
+                path = Paths.get("uploads/snapshots").resolve(fileName);
+            }
+            Resource resource = new UrlResource(path.toUri());
+
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            //if it's DOCX -> convert to PDF
+            if (fileName.endsWith(".docx")) {
+
+                WordprocessingMLPackage wordMLPackage =
+                        WordprocessingMLPackage.load(path.toFile());
+
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                Docx4J.toPDF(wordMLPackage, out);
+                ByteArrayResource pdfResource = new ByteArrayResource(out.toByteArray());
+
+                return ResponseEntity.ok()
+                        .header("Content-Type", MediaType.APPLICATION_PDF.toString())
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; fileName=\"preview.pdf\"")
+                        .body(pdfResource);
+
+            }
+
+            //otherwise return file normally
+            String type = Files.probeContentType(path);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(type != null ? type : "application/octet-stream"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; fileName=\"" + fileName + "\"")
+                    .body(resource);
+        } catch (IOException | Docx4JException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        if (!Files.exists(path)) {
-            path = Paths.get("uploads/snapshots").resolve(fileName);
-        }
-        Resource resource = new UrlResource(path.toUri());
-
-        if (!resource.exists()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        String type = Files.probeContentType(path);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(type))
-                .body(resource);
     }
 //    @GetMapping("/docs/{studentProfileId}")
 //    public List<Documentation> getDocs(@PathVariable Long studentProfileId) {
@@ -344,9 +374,9 @@ public class SupervisorProfileController {
             return ResponseEntity.badRequest().body("Student ID is required");
         }
 
-        Grade grade = gradeRepo.findByStudentProfileId(studentId);
+        Optional<Grade> gradeOpt = gradeRepo.findByStudentProfile_Id(studentId);
 
-        if (grade == null) {
+        if (gradeOpt.isEmpty()) {
             return ResponseEntity.ok(Map.of(
                     "proposal",0,
                     "progress",0,
@@ -354,16 +384,17 @@ public class SupervisorProfileController {
                     "presentation",0
             ));
         }
-        return ResponseEntity.ok(grade);
+
+        return ResponseEntity.ok(gradeOpt.get());
     }
     @PostMapping("/grades/{studentId}")
     public Grade saveGrade(@PathVariable Long studentId,
                            @RequestBody Grade grade) {
-        Grade existing = gradeRepo.findByStudentProfileId(studentId);
+        Optional<Grade> existingOpt =
+                gradeRepo.findByStudentProfile_Id(studentId);
 
-        if(existing != null) {
-            grade.setId(existing.getId());
-        }
+        existingOpt.ifPresent(existing ->
+                grade.setId(existing.getId()));
 
         StudentProfile student =
                 studentRepo.findById(studentId).orElseThrow();
@@ -382,11 +413,8 @@ public class SupervisorProfileController {
     public Grade submitGrade(@PathVariable Long studentId) {
 
         Grade grade = gradeRepo
-                .findByStudentProfileId(studentId);
-
-        if (grade == null) {
-            throw new RuntimeException("Grade not found");
-        }
+                .findByStudentProfile_Id(studentId)
+                .orElseThrow(()-> new RuntimeException("Grade not found"));
 
         grade.setSentToAdmin(true);
 

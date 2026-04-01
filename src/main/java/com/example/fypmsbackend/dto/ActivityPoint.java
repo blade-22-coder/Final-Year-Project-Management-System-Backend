@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class ActivityPoint {
-    private String date;
-    private long count;
+    private String label;
+    private long value;
 }

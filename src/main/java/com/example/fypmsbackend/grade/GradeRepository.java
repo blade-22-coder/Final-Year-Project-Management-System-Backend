@@ -7,4 +7,4 @@ import java.util.Optional;
 
 public interface GradeRepository extends JpaRepository<Grade, Long> {
     Optional<Grade> findBySubmission(Submission submission);
-    Grade findByStudentProfileId(Long studentProfileId);}
+    Optional<Grade> findByStudentProfile_Id(Long studentProfileId);}

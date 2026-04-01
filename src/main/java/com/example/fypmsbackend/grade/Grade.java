@@ -2,8 +2,8 @@ package com.example.fypmsbackend.grade;
 
 import com.example.fypmsbackend.model.Status;
 import com.example.fypmsbackend.student.StudentProfile;
+import com.example.fypmsbackend.submission.Submission;
 import com.example.fypmsbackend.supervisor.SupervisorProfile;
-import com.example.fypmsbackend.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,9 +18,9 @@ public class Grade {
     @GeneratedValue
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_profile_id")
-    private StudentProfile studentprofile;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "student_profile_id", nullable = false)
+    private StudentProfile studentProfile;
     
     @OneToOne
     @JoinColumn(name = "supervisor_profile_id")
@@ -40,27 +40,23 @@ public class Grade {
 
     private boolean sentToAdmin; //supervisor submits
     private boolean approved; //admin approves
-    
-    private String submission;
+
+    @OneToOne
+    @JoinColumn(name = "submission_id")
+    private Submission submission;
+
     private Integer score;
 
-    @JoinColumn(name = "studentId")
     private String fullName;
 
-    @JoinColumn(name = "studentId")
     private String registrationNumber;
 
-    public void setscore(Integer score) {
-    }
-
-    public void setStudentProfile(StudentProfile studentProfile) {
-
-    }
-
-    public void setSupervisorProfile(User supervisor) {
-
-    }
+    private String projectTitle;
 
     //getters and setters
+
+    public void setscore(Integer score) {
+        this.score = score;
+    }
    
 }

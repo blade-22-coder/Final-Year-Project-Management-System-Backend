@@ -4,7 +4,7 @@ import com.example.fypmsbackend.deadline.Deadline;
 import com.example.fypmsbackend.deadline.DeadlineRepository;
 import com.example.fypmsbackend.dto.AdminStats;
 import com.example.fypmsbackend.dto.AllocationRequest;
-import com.example.fypmsbackend.grade.Grade;
+import com.example.fypmsbackend.dto.GradeResponse;
 import com.example.fypmsbackend.grade.GradeRepository;
 import com.example.fypmsbackend.model.Role;
 import com.example.fypmsbackend.student.StudentProfile;
@@ -14,6 +14,7 @@ import com.example.fypmsbackend.supervisor.SupervisorProfile;
 import com.example.fypmsbackend.supervisor.SupervisorProfileRepository;
 import com.example.fypmsbackend.user.User;
 import com.example.fypmsbackend.user.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -75,6 +76,13 @@ public class AdminController {
         userRepo.save(user);
         return ResponseEntity.ok("User has been enabled");
     }
+    //deleting from users table
+    @DeleteMapping("/students/{id}")
+    public ResponseEntity<?> deleteStudent(@PathVariable long id) {
+
+        adminService.deleteStudentById(id);
+        return ResponseEntity.ok("Student has been deleted");
+    }
 
     //SUPERVISORS
     @GetMapping("/supervisors")
@@ -102,15 +110,31 @@ public class AdminController {
 
     //PROJECTS
     @GetMapping("/projects")
-    public List<Grade> allProjects() {
-        return gradeRepo.findAll();
+    public List<GradeResponse> allProjects() {
+        return gradeRepo.findAll().stream().map(g -> {
+
+            GradeResponse dto = new GradeResponse();
+
+            dto.id = g.getId();
+            dto.proposal = g.getProposal();
+            dto.progress = g.getProgress();
+            dto.finalReport = g.getFinalReport();
+            dto.presentation = g.getPresentation();
+            dto.total = g.getTotal();
+
+            //pull from related tables
+            dto.fullName = g.getStudentProfile().getUser().getFullName();
+            dto.registrationNumber = g.getStudentProfile().getRegistrationNumber();
+            dto.projectTitle = g.getStudentProfile().getProjectTitle();
+            return dto;
+        }).toList();
     }
 
     //ANALYTICS
     @GetMapping("/analytics/monthly")
     public List<Map<String, Object>> monthlyAnalytics() {
 
-        return submissionRepo.monthlySubmissions()
+        return submissionRepo.dailySubmissions()
                 .stream()
                 .map(row -> Map.of(
                         "month", row[0],

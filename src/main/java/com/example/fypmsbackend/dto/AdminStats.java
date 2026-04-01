@@ -18,9 +18,10 @@ public class AdminStats {
     private long totalProposals;
     private long totalReports;
 
-    private long approvedCount;
-    private long rejectedCount;
-    private long pendingCount;
+    private long approvedProposals;
+    private long rejectedProposals;
+    private long approvedReports;
+    private long rejectedReports;
 
     private long totalAdmins;
 

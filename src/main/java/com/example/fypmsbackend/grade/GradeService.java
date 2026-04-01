@@ -35,7 +35,7 @@ public class GradeService {
         //enforcing supervisor ownership
         Grade grade = gradeRepo.findBySubmission(submission).orElse(new Grade());
 
-        grade.setSubmission(String.valueOf(submission));
+        grade.setSubmission(submission);
         grade.setscore(score);
         grade.setSupervisorComment(comment);
 
