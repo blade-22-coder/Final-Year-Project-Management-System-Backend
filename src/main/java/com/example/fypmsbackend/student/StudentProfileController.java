@@ -3,8 +3,6 @@ package com.example.fypmsbackend.student;
 import com.example.fypmsbackend.deadline.Deadline;
 import com.example.fypmsbackend.deadline.DeadlineRepository;
 import com.example.fypmsbackend.dto.CommentResponse;
-import com.example.fypmsbackend.model.Notification;
-import com.example.fypmsbackend.repository.NotificationRepository;
 import com.example.fypmsbackend.security.AuthHelper;
 import com.example.fypmsbackend.service.BatteryService;
 import com.example.fypmsbackend.submission.Submission;
@@ -41,7 +39,6 @@ public class StudentProfileController {
     private final StudentProfileRepository studentProfileRepo;
     private final SubmissionRepository submissionRepo;
     private final BatteryService  batteryService;
-    private final NotificationRepository notificationRepository;
     private final DeadlineRepository deadlineRepo;
 
     //HELPER METHODS
@@ -316,16 +313,6 @@ public class StudentProfileController {
                 .toList();
 
         return ResponseEntity.ok(responses);
-    }
-
-    //NOTIFICATIONS
-    @GetMapping("/notifications")
-    public ResponseEntity<?> getNotifications() {
-        User user = authHelper.getCurrentUser();
-
-        //fetch notifications from DB, ordered by latest
-        List<Notification> notifications = notificationRepository.findByUserOrderByCreatedAtDesc(user);
-        return ResponseEntity.ok(notifications);
     }
 
     //DEADLINES

@@ -5,6 +5,7 @@ import com.example.fypmsbackend.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.yaml.snakeyaml.comments.CommentType;
 
 import java.time.LocalDateTime;
 
@@ -35,7 +36,11 @@ public class Comment {
     @JoinColumn(name = "supervisor_id")
     private User supervisor;
 
+    @Enumerated(EnumType.STRING)
+    private CommentType type;
+
     public void setCreatedAt(LocalDateTime now) {
+        this.CreatedAt = now;
     }
 
     //getters & setters

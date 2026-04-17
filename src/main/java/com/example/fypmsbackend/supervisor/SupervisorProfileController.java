@@ -50,14 +50,11 @@ public class SupervisorProfileController {
     private final SupervisorProfileRepository supervisorProfileRepo;
     private final SubmissionRepository submissionRepo;
     private final CommentRepository commentRepo;
-    private final DocumentationRepository documentationRepo;
-    private final GithubRepository  githubRepo;
     private final AnalyticsRepository analyticsRepo;
     private final GradeRepository  gradeRepo;
     private final SupervisorStudentService supervisorStudentService;
     private final StudentProfileRepository studentRepo;
     private final DeadlineRepository deadlineRepo;
-    private final SnapshotRepository snapshotRepo;
 
 
     //PROFILE
@@ -236,12 +233,14 @@ public class SupervisorProfileController {
         c.setMessage(payload.get("message"));
         c.setSupervisor(supervisor);
         c.setSubmission(sub);
+        c.setAuthor("SUPERVSIOR");
         c.setCreatedAt(LocalDateTime.now());
 
         return commentRepo.save(c);
     }
-    @GetMapping("/comments/{submissionId}")
-    public List<Comment> getComments(@PathVariable Long submissionId) {
+    @GetMapping("/comments/{submissionId}/{type}")
+    public List<Comment> getComments(@PathVariable Long submissionId,
+                                     @PathVariable CommentType type) {
         return commentRepo.findBySubmissionId(submissionId);
     }
 
@@ -325,13 +324,6 @@ public class SupervisorProfileController {
 //        }
 //        return ResponseEntity.ok(github);
 //    }
-    @PostMapping("/github/{Id}/comment")
-    public Github commentOnGithub(@PathVariable Long Id,
-                                  @RequestBody String comment) {
-        Github g  = githubRepo.findById(Id).orElseThrow();
-        g.setSupervisorComment(comment);
-        return githubRepo.save(g);
-    }
 
     //SNAPSHOTS
     @GetMapping("/snapshots/{studentId}")
